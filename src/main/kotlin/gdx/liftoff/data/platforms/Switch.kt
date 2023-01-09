@@ -30,6 +30,7 @@ class Switch : Platform {
     addGradleTaskDescription(project, "nro", "packages the project into a homebrew NRO located at `$id/build/${project.basic.name}/${project.basic.name}.nro`")
     addGradleTaskDescription(project, "deploy", "deploys the NRO to a switch via NxLink.")
     addGradleTaskDescription(project, "ryujinx", "runs the NRO in the Ryujinx emulator.")
+    addGradleTaskDescription(project, "uwp", "Generate the UWP project and open Visual Studio")
 
     val reflectiveBuilder = StringBuilder()
     project.switchReflective.forEach {
@@ -260,6 +261,19 @@ task ryujinx(dependsOn: nro) {
 configure(ryujinx) {
     group "SwitchGDX"
     description = "Run with the SwitchGDX backend on Switch via NxLink"
+}
+
+task uwp(dependsOn: transpile) {
+    doLast {
+        exec {
+            commandLine 'cmd', '/c', "call uwp.cmd"
+            workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
+        }
+    }
+}
+configure(uwp) {
+    group "SwitchGDX"
+    description = "Generate the UWP project and open Visual Studio"
 }
 """
 }
