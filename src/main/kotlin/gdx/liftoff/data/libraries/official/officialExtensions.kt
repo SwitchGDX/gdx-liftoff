@@ -64,6 +64,8 @@ class Ashley : OfficialExtension() {
 
     addDependency(project, GWT.ID, "com.badlogicgames.ashley:ashley:\$ashleyVersion:sources")
     addGwtInherit(project, "com.badlogic.ashley_gwt")
+
+    addSwitchReflective(project, "com.badlogic.ashley.core.Entity")
   }
 }
 

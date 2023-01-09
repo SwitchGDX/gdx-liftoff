@@ -1,0 +1,8 @@
+{
+    "mainClass": "{MAIN_CLASS}",
+    "reflective": [
+        {REFLECTIVE}    ],
+    "useStackTraces": true,
+    "useLineNumbers": true,
+    "useValueChecks": true
+}

@@ -77,6 +77,22 @@ class ArtemisOdb : ThirdPartyExtension() {
       )
       addGwtInherit(project, "jsr305")
     }
+
+    addSwitchReflective(project,
+      "com.artemis.BaseSystem",
+      "com.artemis.utils.BitVector",
+      "com.artemis.utils.Bag",
+      "com.artemis.Aspect.Builder",
+      "com.artemis.WildBag",
+      "com.artemis.EntityEdit",
+      "com.artemis.EntityTransmuter.TransmuteOperation",
+      "com.artemis.ComponentRemover",
+      "com.artemis.ComponentTypeFactory.ComponentTypeListener",
+      "com.artemis.EntitySubscription",
+      "com.artemis.Component",
+      "com.artemis.Aspect",
+      "com.artemis.Entity"
+    )
   }
 }
 
@@ -503,6 +519,8 @@ class TenPatch : ThirdPartyExtension() {
 
     addDependency(project, GWT.ID, "com.github.raeleus.TenPatch:tenpatch:sources")
     addGwtInherit(project, "com.ray3k.tenpatch.tenpatch")
+
+    addSwitchReflective(project, "com.ray3k.tenpatch.TenPatchDrawable")
   }
 }
 
@@ -761,6 +779,8 @@ class VisUI : ThirdPartyExtension() {
 
     addDependency(project, GWT.ID, "com.kotcrab.vis:vis-ui:sources")
     addGwtInherit(project, "com.kotcrab.vis.vis-ui")
+
+    addSwitchReflective(project, "com.kotcrab.vis.ui.**Style")
   }
 }
 
@@ -1064,6 +1084,13 @@ class HyperLap2DRuntime : ThirdPartyExtension() {
     addDependency(project, Core.ID, "games.rednblack.hyperlap2d:runtime-libgdx")
     addDependency(project, GWT.ID, "games.rednblack.hyperlap2d:runtime-libgdx:sources")
     addGwtInherit(project, "HyperLap2D")
+
+    addSwitchReflective(project,
+      "games.rednblack.editor.renderer.data.**",
+      "games.rednblack.editor.renderer.components.**",
+      "games.rednblack.hyperrunner.component.**",
+      "games.rednblack.editor.renderer.systems.strategy.InterpolationSystem"
+    )
 
     Box2D().initiate(project)
     Freetype().initiate(project)

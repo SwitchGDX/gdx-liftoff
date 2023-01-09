@@ -43,6 +43,7 @@ class Project(
     "org.gradle.configureondemand" to "false"
   )
   val gwtInherits = mutableSetOf<String>()
+  val switchReflective = mutableSetOf<String>()
   val androidPermissions = mutableSetOf<String>()
 
   val reflectedClasses = mutableSetOf<String>()

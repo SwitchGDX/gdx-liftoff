@@ -1,10 +1,6 @@
 package gdx.liftoff.data.libraries
 
-import gdx.liftoff.data.platforms.Android
-import gdx.liftoff.data.platforms.AndroidGradleFile
-import gdx.liftoff.data.platforms.GWT
-import gdx.liftoff.data.platforms.Lwjgl2
-import gdx.liftoff.data.platforms.Lwjgl3
+import gdx.liftoff.data.platforms.*
 import gdx.liftoff.data.project.Project
 
 /**
@@ -61,6 +57,12 @@ interface Library {
   fun addGwtInherit(project: Project, inherit: String) {
     if (project.hasPlatform(GWT.ID)) {
       project.gwtInherits.add(inherit)
+    }
+  }
+
+  fun addSwitchReflective(project: Project, vararg reflective: String) {
+    if (project.hasPlatform(Switch.ID)) {
+      project.switchReflective.addAll(reflective)
     }
   }
 

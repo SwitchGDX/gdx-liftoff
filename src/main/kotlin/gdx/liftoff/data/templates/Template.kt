@@ -11,6 +11,7 @@ import gdx.liftoff.data.platforms.Headless
 import gdx.liftoff.data.platforms.Lwjgl2
 import gdx.liftoff.data.platforms.Lwjgl3
 import gdx.liftoff.data.platforms.Server
+import gdx.liftoff.data.platforms.Switch
 import gdx.liftoff.data.platforms.TeaVM
 import gdx.liftoff.data.platforms.iOS
 import gdx.liftoff.data.platforms.iOSMOE
@@ -53,6 +54,7 @@ interface Template {
     addIOSMOELauncher(project)
     addLwjgl3Launcher(project)
     addServerLauncher(project)
+    addSwitchLauncher(project)
     addTeaVMLauncher(project)
     project.readmeDescription = description
   }
@@ -113,6 +115,26 @@ public class DesktopLauncher {
         }
         return configuration;
     }
+}"""
+
+  fun addSwitchLauncher(project: Project) {
+    addSourceFile(
+      project = project,
+      platform = Switch.ID,
+      packageName = "${project.basic.rootPackage}.switchgdx",
+      fileName = "SwitchLauncher.$launcherExtension",
+      content = getSwitchLauncherContent(project)
+    )
+  }
+
+  fun getSwitchLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.switchgdx;
+import com.thelogicmaster.switchgdx.SwitchApplication;
+import ${project.basic.rootPackage}.${project.basic.mainClass};
+/** Launches the switch (SwitchGDX) application. */
+public class SwitchLauncher {
+	public static void main(String[] args) {
+		new SwitchApplication(new ${project.basic.mainClass}());
+	}
 }"""
 
   fun addGwtLauncher(project: Project) {
