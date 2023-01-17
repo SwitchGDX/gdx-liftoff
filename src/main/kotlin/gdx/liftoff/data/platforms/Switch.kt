@@ -25,9 +25,10 @@ class Switch : Platform {
   override fun createGradleFile(project: Project): GradleFile = SwitchGradleFile(project)
 
   override fun initiate(project: Project) {
-    addGradleTaskDescription(project, "transpile", "transpiles the project into `$id/build/${project.basic.name}`.")
+    val name = project.basic.destination.name()
+    addGradleTaskDescription(project, "transpile", "transpiles the project into `$id/build/${name}`.")
     addGradleTaskDescription(project, "run", "runs the transpiled application as a desktop program.")
-    addGradleTaskDescription(project, "nro", "packages the project into a homebrew NRO located at `$id/build/${project.basic.name}/${project.basic.name}.nro`")
+    addGradleTaskDescription(project, "nro", "packages the project into a homebrew NRO located at `$id/build/${name}/${name}.nro`")
     addGradleTaskDescription(project, "deploy", "deploys the NRO to a switch via NxLink.")
     addGradleTaskDescription(project, "ryujinx", "runs the NRO in the Ryujinx emulator.")
     addGradleTaskDescription(project, "uwp", "Generate the UWP project and open Visual Studio")
@@ -162,9 +163,9 @@ task transpile(dependsOn: 'build') {
 
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'cmd', '/c', "rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/build-run' --exclude '/build-uwp' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
+                commandLine 'cmd', '/c', "rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/build-uwp' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
             else
-                commandLine 'bash', '-c', "rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/build-run' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
+                commandLine 'bash', '-c', "rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
             workingDir "${'$'}buildDir"
         }
     }
@@ -180,21 +181,21 @@ task run(dependsOn: transpile) {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
                 commandLine 'C:\\devkitPro\\msys2\\msys2_shell.cmd', '-mingw64', '-where', "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}", '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build-run -G \'MSYS Makefiles\' && cmake --build build-run || sleep 50000'
             else
-                commandLine 'bash', '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build-run -G Ninja && cmake --build build-run'
+                commandLine 'bash', '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B cmake-build-run -G Ninja && cmake --build cmake-build-run'
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
         }
         if (DefaultNativePlatform.currentOperatingSystem.isWindows()) {
             copy { // Todo: Copy only needed
                 from "C:\\devkitPro\\msys2\\mingw64\\bin"
                 include "*.dll"
-                into "${'$'}buildDir\\${'$'}{rootProject.name}\\build-run"
+                into "${'$'}buildDir\\${'$'}{rootProject.name}\\cmake-build-run"
             }
         }
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'cmd', '/c', 'build-run\\SwitchGDX.exe'
+                commandLine 'cmd', '/c', 'cmake-build-run\\SwitchGDX.exe'
             else
-                commandLine 'bash', '-c', './build-run/SwitchGDX'
+                commandLine 'bash', '-c', './cmake-build-run/SwitchGDX'
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
         }
     }
@@ -208,9 +209,10 @@ task nro(dependsOn: transpile) {
     doLast {
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'C:\\devkitPro\\msys2\\msys2_shell.cmd', '-mingw64', '-where', "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}", '-c', 'make -j8 || sleep 50000'
+                commandLine 'C:\\devkitPro\\msys2\\msys2_shell.cmd', '-mingw64', '-where', "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}", '-c',
+                        'cmake --toolchain DevkitA64Libnx.cmake -B cmake-build-switch . && cmake --build cmake-build-switch -j8 || sleep 50000'
             else
-                commandLine 'bash', '-c', 'make -j8'
+                commandLine 'bash', '-c', 'cmake --toolchain DevkitA64Libnx.cmake -B cmake-build-switch . && cmake --build cmake-build-switch -j8'
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
             environment 'APP_TITLE', appTitle
             environment 'APP_AUTHOR', appAuthor
@@ -227,9 +229,9 @@ task deploy(dependsOn: nro) {
     doLast {
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'bash', '-c', "/opt/devkitpro/tools/bin/nxlink --server ./${'$'}{rootProject.name}.nro"
+                commandLine 'bash', '-c', "/opt/devkitpro/tools/bin/nxlink --server ./cmake-build-switch/${'$'}{rootProject.name}.nro"
             else
-                commandLine 'bash', '-c', "\${'$'}DEVKITPRO/tools/bin/nxlink --server ./${'$'}{rootProject.name}.nro"
+                commandLine 'bash', '-c', "\${'$'}DEVKITPRO/tools/bin/nxlink --server ./cmake-build-switch/${'$'}{rootProject.name}.nro"
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
         }
     }
@@ -251,9 +253,9 @@ task ryujinx(dependsOn: nro) {
             throw new Exception('The path to the Ryujinx emulator executable is unset. Set "ryujinxPath" in local.properties file.')
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'cmd', '/c', "${'$'}{properties.getProperty("ryujinxPath")} ${'$'}{rootProject.name}.nro"
+                commandLine 'cmd', '/c', "${'$'}{properties.getProperty("ryujinxPath")} cmake-build-switch/${'$'}{rootProject.name}.nro"
             else
-                commandLine 'bash', '-c', "${'$'}{properties.getProperty("ryujinxPath")} ${'$'}{rootProject.name}.nro"
+                commandLine 'bash', '-c', "${'$'}{properties.getProperty("ryujinxPath")} ./cmake-build-switch/${'$'}{rootProject.name}.nro"
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
         }
     }

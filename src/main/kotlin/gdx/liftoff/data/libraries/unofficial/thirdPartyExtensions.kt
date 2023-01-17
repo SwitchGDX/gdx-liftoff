@@ -1086,10 +1086,21 @@ class HyperLap2DRuntime : ThirdPartyExtension() {
     addGwtInherit(project, "HyperLap2D")
 
     addSwitchReflective(project,
-      "games.rednblack.editor.renderer.data.**",
-      "games.rednblack.editor.renderer.components.**",
-      "games.rednblack.hyperrunner.component.**",
-      "games.rednblack.editor.renderer.systems.strategy.InterpolationSystem"
+      "games.rednblack.hyperrunner.component.*",
+      "games.rednblack.hyperrunner.system.*",
+      "games.rednblack.hyperrunner.script.*",
+      "games.rednblack.editor.renderer.data.*",
+      "games.rednblack.editor.renderer.components.**Component",
+      "games.rednblack.editor.renderer.components.normal.NormalMapRendering",
+      "games.rednblack.editor.renderer.SceneLoader",
+      "games.rednblack.editor.renderer.systems.**System",
+      "games.rednblack.editor.renderer.box2dLight.LightData",
+      "games.rednblack.editor.renderer.systems.render.HyperLap2dRenderer",
+      "games.rednblack.editor.renderer.systems.render.logic.*",
+      "games.rednblack.editor.renderer.systems.action.logic.*",
+      "games.rednblack.editor.renderer.factory.component.*",
+      "games.rednblack.editor.renderer.factory.EntityFactory",
+      "java.util.HashSet"
     )
 
     Box2D().initiate(project)
