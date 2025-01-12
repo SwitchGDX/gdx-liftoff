@@ -4,17 +4,13 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.utils.GdxRuntimeException
 import com.badlogic.gdx.utils.JsonReader
 import com.github.kittinunf.fuel.Fuel.get
-import devcsrj.mvnrepository.MvnRepositoryApi
-import gdx.liftoff.config.executeAnyOf
-import gdx.liftoff.config.threadPool
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * HTTP request timeout when fetching extension versions.
  */
 const val REQUEST_TIMEOUT = 30000
 val json = JsonReader()
+
 /**
  * Interface for the supported Maven repositories. Fetches the latest versions of the registered libraries.
  */
@@ -28,34 +24,29 @@ interface Repository {
    */
   object MavenCentral : CachedRepository() {
     override fun fetchLatestVersion(group: String, name: String): String? {
-      // Fetching versions from multiple services in parallel - the first result is returned:
-      return executeAnyOf(
-        CompletableFuture.supplyAsync({ fetchVersionFromMvnRepository(group, name) }, threadPool),
-        CompletableFuture.supplyAsync({ fetchVersionFromMavenCentral(group, name) }, threadPool)
-      ).get()
-    }
-
-    private fun fetchVersionFromMvnRepository(group: String, name: String): String {
-      // MVNrepository is much faster than Maven Central search, but it does not report
-      // beta versions and release candidates. If no version was found, the application usually
-      // fallbacks to the slower Maven Central search performed in parallel.
-      val versions = MvnRepositoryApi.create().getArtifactVersions(group, name)
-      if (versions.isNotEmpty()) return versions.first()
-      throw GdxRuntimeException("Unable to fetch $group:$name version from MVNrepository.")
+      var res: String? = null
+      try {
+        res = fetchVersionFromMavenCentral(group, name)
+      } catch (_: Exception) {
+      }
+      return res
     }
 
     private fun fetchVersionFromMavenCentral(group: String, name: String): String {
       val response = get(
+        // https://search.maven.org/solrsearch/select?q=g:"com.github.tommyettinger"%20AND%20a:"jdkgdxds"&rows=1&wt=json
         "https://search.maven.org/solrsearch/select",
         listOf(
-          "q" to """g:"group"+AND+a:"$name"""",
+          // yes, we actually do need the spaces in here.
+          "q" to """g:"$group" AND a:"$name"""",
           "rows" to "1",
-          "wt" to "json",
+          "wt" to "json"
         )
       ).timeout(REQUEST_TIMEOUT)
       val results = json.parse(response.responseString().third.get())["response"]["docs"]
       if (results.notEmpty()) {
-        return results[0].getString("latestVersion")
+        val res = results[0].getString("latestVersion")
+        return res
       }
       throw GdxRuntimeException("Unable to fetch $group:$name version from Maven Central.")
     }
@@ -83,11 +74,13 @@ interface Repository {
  * Abstract implementation of [Repository]. Caches fetched versions.
  */
 abstract class CachedRepository : Repository {
-  private val versions: MutableMap<Pair<String, String>, String> = ConcurrentHashMap()
+  private val versions: MutableMap<String, String> = HashMap(64)
 
   override fun getLatestVersion(group: String, name: String): String? {
-    val identifier = group to name
-    versions[identifier]?.let { return@getLatestVersion it }
+    val identifier = "$group:$name"
+    versions[identifier]?.let {
+      return@getLatestVersion it
+    }
     // Latest version not in cache - fetching:
     val version = fetchLatestVersion(group, name)
     if (version != null) {

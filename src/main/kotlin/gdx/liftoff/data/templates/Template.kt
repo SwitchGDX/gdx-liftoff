@@ -8,13 +8,13 @@ import gdx.liftoff.data.platforms.Assets
 import gdx.liftoff.data.platforms.Core
 import gdx.liftoff.data.platforms.GWT
 import gdx.liftoff.data.platforms.Headless
+import gdx.liftoff.data.platforms.IOS
+import gdx.liftoff.data.platforms.IOSMOE
 import gdx.liftoff.data.platforms.Lwjgl2
 import gdx.liftoff.data.platforms.Lwjgl3
 import gdx.liftoff.data.platforms.Server
 import gdx.liftoff.data.platforms.Switch
 import gdx.liftoff.data.platforms.TeaVM
-import gdx.liftoff.data.platforms.iOS
-import gdx.liftoff.data.platforms.iOSMOE
 import gdx.liftoff.data.project.Project
 
 /**
@@ -22,11 +22,13 @@ import gdx.liftoff.data.project.Project
  */
 interface Template {
   val id: String
+
   // Sizes are kept as strings, so you can set the sizes to static values, for example: MainClass.WIDTH.
   val width: String
     get() = "640"
   val height: String
     get() = "480"
+
   /** Used as project description in README file. Optional. */
   val description: String
     get() = ""
@@ -34,6 +36,7 @@ interface Template {
   /** File extension of the ApplicationListener implementation. */
   val applicationListenerExtension: String
     get() = "java"
+
   /** File extension of the application launchers on each platform. */
   val launcherExtension: String
     get() = "java"
@@ -47,7 +50,7 @@ interface Template {
   fun apply(project: Project) {
     addApplicationListener(project)
     addAndroidLauncher(project)
-    addDesktopLauncher(project)
+    addLwjgl2Launcher(project)
     addGwtLauncher(project)
     addHeadlessLauncher(project)
     addIOSLauncher(project)
@@ -75,25 +78,25 @@ interface Template {
    */
   fun getApplicationListenerContent(project: Project): String
 
-  fun addDesktopLauncher(project: Project) {
+  fun addLwjgl2Launcher(project: Project) {
     addSourceFile(
       project = project,
       platform = Lwjgl2.ID,
-      packageName = "${project.basic.rootPackage}.desktop",
-      fileName = "DesktopLauncher.$launcherExtension",
-      content = getDesktopLauncherContent(project)
+      packageName = "${project.basic.rootPackage}.lwjgl2",
+      fileName = "Lwjgl2Launcher.$launcherExtension",
+      content = getLwjgl2LauncherContent(project)
     )
   }
 
-  fun getDesktopLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.desktop;
+  fun getLwjgl2LauncherContent(project: Project): String = """package ${project.basic.rootPackage}.lwjgl2;
 
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 import ${project.basic.rootPackage}.${project.basic.mainClass};
 
-/** Launches the desktop (LWJGL) application. */
-public class DesktopLauncher {
+/** Launches the desktop (LWJGL2) application. */
+public class Lwjgl2Launcher {
     public static void main(String[] args) {
         createApplication();
     }
@@ -158,8 +161,8 @@ import ${project.basic.rootPackage}.${project.basic.mainClass};
 
 /** Launches the GWT application. */
 public class GwtLauncher extends GwtApplication {""" + (
-    if (GdxVersion.parseGdxVersion(project.advanced.gdxVersion) != null && GdxVersion.parseGdxVersion(project.advanced.gdxVersion)!! < GdxVersion(1, 9, 12))
-"""
+    if (GdxVersion.parseGdxVersion(project.advanced.gdxVersion) != null && GdxVersion.parseGdxVersion(project.advanced.gdxVersion)!! < GdxVersion(1, 9, 12)) {
+      """
         ////USE THIS CODE FOR A FIXED SIZE APPLICATION
         @Override
         public GwtApplicationConfiguration getConfig () {
@@ -197,7 +200,8 @@ public class GwtLauncher extends GwtApplication {""" + (
         //    }
         ////END OF CODE FOR RESIZABLE APPLICATION
 """
-    else """
+    } else {
+      """
         @Override
         public GwtApplicationConfiguration getConfig () {
             // Resizable application, uses available space in browser with no padding:
@@ -210,6 +214,7 @@ public class GwtLauncher extends GwtApplication {""" + (
             //return new GwtApplicationConfiguration($width, $height);
         }
 """
+    }
     ) +
 """
         @Override
@@ -289,14 +294,14 @@ public class HeadlessLauncher {
   fun addIOSLauncher(project: Project) {
     addSourceFile(
       project = project,
-      platform = iOS.ID,
-      packageName = "${project.basic.rootPackage}.ios",
+      platform = IOS.ID,
+      packageName = project.basic.rootPackage,
       fileName = "IOSLauncher.$launcherExtension",
       content = getIOSLauncherContent(project)
     )
   }
 
-  fun getIOSLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.ios;
+  fun getIOSLauncherContent(project: Project): String = """package ${project.basic.rootPackage};
 
 import org.robovm.apple.foundation.NSAutoreleasePool;
 import org.robovm.apple.uikit.UIApplication;
@@ -323,14 +328,14 @@ public class IOSLauncher extends IOSApplication.Delegate {
   fun addIOSMOELauncher(project: Project) {
     addSourceFile(
       project = project,
-      platform = iOSMOE.ID,
-      packageName = "${project.basic.rootPackage}.ios",
+      platform = IOSMOE.ID,
+      packageName = project.basic.rootPackage,
       fileName = "IOSLauncher.$launcherExtension",
       content = getIOSMOELauncherContent(project)
     )
   }
 
-  fun getIOSMOELauncherContent(project: Project): String = """package ${project.basic.rootPackage}.ios;
+  fun getIOSMOELauncherContent(project: Project): String = """package ${project.basic.rootPackage};
 
 import apple.uikit.c.UIKit;
 import com.badlogic.gdx.backends.iosmoe.IOSApplication;
@@ -363,6 +368,13 @@ public class IOSLauncher extends IOSApplication.Delegate {
       fileName = "Lwjgl3Launcher.$launcherExtension",
       content = getLwjgl3LauncherContent(project)
     )
+    addSourceFile(
+      project = project,
+      platform = Lwjgl3.ID,
+      packageName = "${project.basic.rootPackage}.lwjgl3",
+      fileName = "StartupHelper.$launcherExtension",
+      content = getLwjgl3StartupContent(project)
+    )
   }
 
   fun getLwjgl3LauncherContent(project: Project): String = """package ${project.basic.rootPackage}.lwjgl3;
@@ -374,6 +386,7 @@ import ${project.basic.rootPackage}.${project.basic.mainClass};
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
+        if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         createApplication();
     }
 
@@ -384,15 +397,199 @@ public class Lwjgl3Launcher {
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
         configuration.setTitle("${project.basic.name}");
+        //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
+        //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
         configuration.useVsync(true);
-        //// Limits FPS to the refresh rate of the currently active monitor.
-        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
+        //// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
+        //// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
+        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
         //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
         configuration.setWindowedMode($width, $height);
+        //// You can change these files; they are in lwjgl3/src/main/resources/ .
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
         return configuration;
+    }
+}"""
+
+  fun getLwjgl3StartupContent(project: Project): String = """/*
+ * Copyright 2020 damios
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+//Note, the above license and copyright applies to this file only.
+
+package ${project.basic.rootPackage}.lwjgl3;
+
+import org.lwjgl.system.macosx.LibC;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+
+/**
+ * Adds some utilities to ensure that the JVM was started with the
+ * {@code -XstartOnFirstThread} argument, which is required on macOS for LWJGL 3
+ * to function. Also helps on Windows when users have names with characters from
+ * outside the Latin alphabet, a common cause of startup crashes.
+ * <br>
+ * <a href="https://jvm-gaming.org/t/starting-jvm-on-mac-with-xstartonfirstthread-programmatically/57547">Based on this java-gaming.org post by kappa</a>
+ * @author damios
+ */
+public class StartupHelper {
+
+    private static final String JVM_RESTARTED_ARG = "jvmIsRestarted";
+
+    private StartupHelper() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Starts a new JVM if the application was started on macOS without the
+     * {@code -XstartOnFirstThread} argument. This also includes some code for
+     * Windows, for the case where the user's home directory includes certain
+     * non-Latin-alphabet characters (without this code, most LWJGL3 apps fail
+     * immediately for those users). Returns whether a new JVM was started and
+     * thus no code should be executed.
+     * <p>
+     * <u>Usage:</u>
+     *
+     * <pre><code>
+     * public static void main(String... args) {
+     * 	if (StartupHelper.startNewJvmIfRequired(true)) return; // This handles macOS support and helps on Windows.
+     * 	// after this is the actual main method code
+     * }
+     * </code></pre>
+     *
+     * @param redirectOutput
+     *            whether the output of the new JVM should be rerouted to the
+     *            old JVM, so it can be accessed in the same place; keeps the
+     *            old JVM running if enabled
+     * @return whether a new JVM was started and thus no code should be executed
+     *         in this one
+     */
+    public static boolean startNewJvmIfRequired(boolean redirectOutput) {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (!osName.contains("mac")) {
+            if (osName.contains("windows")) {
+// Here, we are trying to work around an issue with how LWJGL3 loads its extracted .dll files.
+// By default, LWJGL3 extracts to the directory specified by "java.io.tmpdir", which is usually the user's home.
+// If the user's name has non-ASCII (or some non-alphanumeric) characters in it, that would fail.
+// By extracting to the relevant "ProgramData" folder, which is usually "C:\ProgramData", we avoid this.
+                System.setProperty("java.io.tmpdir", System.getenv("ProgramData") + "/libGDX-temp");
+            }
+            return false;
+        }
+
+        // There is no need for -XstartOnFirstThread on Graal native image
+        if (!System.getProperty("org.graalvm.nativeimage.imagecode", "").isEmpty()) {
+            return false;
+        }
+
+        long pid = LibC.getpid();
+
+        // check whether -XstartOnFirstThread is enabled
+        if ("1".equals(System.getenv("JAVA_STARTED_ON_FIRST_THREAD_" + pid))) {
+            return false;
+        }
+
+        // check whether the JVM was previously restarted
+        // avoids looping, but most certainly leads to a crash
+        if ("true".equals(System.getProperty(JVM_RESTARTED_ARG))) {
+            System.err.println(
+                    "There was a problem evaluating whether the JVM was started with the -XstartOnFirstThread argument.");
+            return false;
+        }
+
+        // Restart the JVM with -XstartOnFirstThread
+        ArrayList<String> jvmArgs = new ArrayList<>();
+        String separator = System.getProperty("file.separator");
+        // The following line is used assuming you target Java 8, the minimum for LWJGL3.
+        String javaExecPath = System.getProperty("java.home") + separator + "bin" + separator + "java";
+        // If targeting Java 9 or higher, you could use the following instead of the above line:
+        //String javaExecPath = ProcessHandle.current().info().command().orElseThrow();
+
+        if (!(new File(javaExecPath)).exists()) {
+            System.err.println(
+                    "A Java installation could not be found. If you are distributing this app with a bundled JRE, be sure to set the -XstartOnFirstThread argument manually!");
+            return false;
+        }
+
+        jvmArgs.add(javaExecPath);
+        jvmArgs.add("-XstartOnFirstThread");
+        jvmArgs.add("-D" + JVM_RESTARTED_ARG + "=true");
+        jvmArgs.addAll(ManagementFactory.getRuntimeMXBean().getInputArguments());
+        jvmArgs.add("-cp");
+        jvmArgs.add(System.getProperty("java.class.path"));
+        String mainClass = System.getenv("JAVA_MAIN_CLASS_" + pid);
+        if (mainClass == null) {
+            StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+            if (trace.length > 0) {
+                mainClass = trace[trace.length - 1].getClassName();
+            } else {
+                System.err.println("The main class could not be determined.");
+                return false;
+            }
+        }
+        jvmArgs.add(mainClass);
+
+        try {
+            if (!redirectOutput) {
+                ProcessBuilder processBuilder = new ProcessBuilder(jvmArgs);
+                processBuilder.start();
+            } else {
+                Process process = (new ProcessBuilder(jvmArgs))
+                        .redirectErrorStream(true).start();
+                BufferedReader processOutput = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()));
+                String line;
+
+                while ((line = processOutput.readLine()) != null) {
+                    System.out.println(line);
+                }
+
+                process.waitFor();
+            }
+        } catch (Exception e) {
+            System.err.println("There was a problem restarting the JVM");
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+    /**
+     * Starts a new JVM if the application was started on macOS without the
+     * {@code -XstartOnFirstThread} argument. Returns whether a new JVM was
+     * started and thus no code should be executed. Redirects the output of the
+     * new JVM to the old one.
+     * <p>
+     * <u>Usage:</u>
+     *
+     * <pre>
+     * public static void main(String... args) {
+     * 	if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
+     * 	// the actual main method code
+     * }
+     * </pre>
+     *
+     * @return whether a new JVM was started and thus no code should be executed
+     *         in this one
+     */
+    public static boolean startNewJvmIfRequired() {
+        return startNewJvmIfRequired(true);
     }
 }"""
 
@@ -434,47 +631,47 @@ public class ServerLauncher {
   fun getTeaVMLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.teavm;
 
 import com.github.xpenatan.gdx.backends.teavm.TeaApplicationConfiguration;
-import com.github.xpenatan.gdx.backends.web.WebApplication;
-import com.github.xpenatan.gdx.backends.web.WebApplicationConfiguration;
+import com.github.xpenatan.gdx.backends.teavm.TeaApplication;
 import ${project.basic.rootPackage}.${project.basic.mainClass};
 
 /**
  * Launches the TeaVM/HTML application.
- * <br>
- * It may be important to note that if the TeaVM page is loaded from a URL with parameters,
- * that is, with a '?' sign after ".html" or some other file extension, then loading any
- * assets might not work right now. This is especially true when loading via IntelliJ IDEA's
- * built-in web server, which will default to adding on URL parameters that can be removed.
  */
 public class TeaVMLauncher {
     public static void main(String[] args) {
-        WebApplicationConfiguration config = new TeaApplicationConfiguration("canvas");
-        // change these to both 0 to use all available space, or both -1 for the canvas size.
-        config.width = $width;
-        config.height = $height;
-        new WebApplication(new ${project.basic.mainClass}(), config);
+        TeaApplicationConfiguration config = new TeaApplicationConfiguration("canvas");
+        //// If width and height are each greater than 0, then the app will use a fixed size.
+        //config.width = $width;
+        //config.height = $height;
+        //// If width and height are both 0, then the app will use all available space.
+        //config.width = 0;
+        //config.height = 0;
+        //// If width and height are both -1, then the app will fill the canvas size.
+        config.width = -1;
+        config.height = -1;
+        new TeaApplication(new ${project.basic.mainClass}(), config);
     }
 }
 """
   fun getTeaVMBuilderContent(project: Project): String = """package ${project.basic.rootPackage}.teavm;
 
-import com.github.xpenatan.gdx.backends.teavm.TeaBuildConfiguration;
-import com.github.xpenatan.gdx.backends.teavm.TeaBuilder;
-import com.github.xpenatan.gdx.backends.teavm.plugins.TeaReflectionSupplier;
-import com.github.xpenatan.gdx.backends.web.gen.SkipClass;
+import com.github.xpenatan.gdx.backends.teavm.config.AssetFileHandle;
+import com.github.xpenatan.gdx.backends.teavm.config.TeaBuildConfiguration;
+import com.github.xpenatan.gdx.backends.teavm.config.TeaBuilder;
+import com.github.xpenatan.gdx.backends.teavm.config.plugins.TeaReflectionSupplier;
+import com.github.xpenatan.gdx.backends.teavm.gen.SkipClass;
 import java.io.File;
 import java.io.IOException;
 import org.teavm.tooling.TeaVMTool;
+import org.teavm.vm.TeaVMOptimizationLevel;
 
 /** Builds the TeaVM/HTML application. */
 @SkipClass
 public class TeaVMBuilder {
     public static void main(String[] args) throws IOException {
         TeaBuildConfiguration teaBuildConfiguration = new TeaBuildConfiguration();
-        teaBuildConfiguration.assetsPath.add(new File("../${Assets.ID}"));
+        teaBuildConfiguration.assetsPath.add(new AssetFileHandle("../${Assets.ID}"));
         teaBuildConfiguration.webappPath = new File("build/dist").getCanonicalPath();
-        // You can switch this setting during development:
-        teaBuildConfiguration.obfuscate = true;
 
         // Register any extra classpath assets here:
         // teaBuildConfiguration.additionalAssetsClasspathFiles.add("${project.basic.rootPackage.replace('.', '/')}/asset.extension");
@@ -484,6 +681,10 @@ ${generateTeaVMReflectionIncludes(project)}
 
         TeaVMTool tool = TeaBuilder.config(teaBuildConfiguration);
         tool.setMainClass(TeaVMLauncher.class.getName());
+        // For many (or most) applications, using the highest optimization won't add much to build time.
+        // If your builds take too long, and runtime performance doesn't matter, you can change FULL to SIMPLE .
+        tool.setOptimizationLevel(TeaVMOptimizationLevel.FULL);
+        tool.setObfuscated(true);
         TeaBuilder.build(tool);
     }
 }

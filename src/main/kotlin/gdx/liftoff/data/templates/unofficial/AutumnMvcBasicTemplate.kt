@@ -42,7 +42,9 @@ open class AutumnMvcBasicTemplate : Template {
   protected open fun addViews(project: Project) {
     project.files.add(
       SourceFile(
-        projectName = Assets.ID, sourceFolderPath = "ui", packageName = "templates",
+        projectName = Assets.ID,
+        sourceFolderPath = "ui",
+        packageName = "templates",
         fileName = "first.lml",
         content = """<!-- Note: you can get content assist thanks to DTD schema files. See the official LML page. -->
 <window title="Example" style="border" defaultPad="4" oneColumn="true">
@@ -78,7 +80,7 @@ public class ${project.basic.mainClass} implements ActionContainer {
     }
 }"""
 
-  override fun getDesktopLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.desktop;
+  override fun getLwjgl2LauncherContent(project: Project): String = """package ${project.basic.rootPackage}.lwjgl2;
 
 import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
@@ -87,8 +89,8 @@ import com.github.czyzby.autumn.fcs.scanner.DesktopClassScanner;
 import com.github.czyzby.autumn.mvc.application.AutumnApplication;
 import ${project.basic.rootPackage}.${project.basic.mainClass};
 
-/** Launches the desktop (LWJGL) application. */
-public class DesktopLauncher {
+/** Launches the desktop (LWJGL2) application. */
+public class Lwjgl2Launcher {
     public static void main(String[] args) {
         createApplication();
     }
@@ -124,6 +126,7 @@ import ${project.basic.rootPackage}.${project.basic.mainClass};
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
+        if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         createApplication();
     }
 
@@ -216,7 +219,7 @@ public class HeadlessLauncher {
     }
 }"""
 
-  override fun getIOSLauncherContent(project: Project): String = """package ${project.basic.rootPackage}.ios;
+  override fun getIOSLauncherContent(project: Project): String = """package ${project.basic.rootPackage};
 
 import org.robovm.apple.foundation.NSAutoreleasePool;
 import org.robovm.apple.uikit.UIApplication;

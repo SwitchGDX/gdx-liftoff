@@ -1,5 +1,6 @@
 package gdx.liftoff.data.platforms
 
+import com.badlogic.gdx.Gdx
 import gdx.liftoff.config.GdxVersion
 import gdx.liftoff.data.files.CopiedFile
 import gdx.liftoff.data.files.SourceFile
@@ -15,7 +16,7 @@ import gdx.liftoff.views.GdxPlatform
 class GWT : Platform {
   companion object {
     const val ID = "html"
-    const val ORDER = iOS.ORDER + 1
+    const val ORDER = IOS.ORDER + 1
     const val BASIC_INHERIT = "com.badlogic.gdx.backends.gdx_backends_gwt"
     val INHERIT_COMPARATOR = Comparator<String> { a, b ->
       // Basic GWT inherit has to be first:
@@ -37,8 +38,6 @@ class GWT : Platform {
   override fun createGradleFile(project: Project): GradleFile = GWTGradleFile(project)
 
   override fun initiate(project: Project) {
-    project.rootGradle.buildDependencies.add("\"org.wisepersist:gwt-gradle-plugin:\$gwtPluginVersion\"")
-
     addGradleTaskDescription(project, "superDev", "compiles GWT sources and runs the application in SuperDev mode. It will be available at [localhost:8080/$id](http://localhost:8080/$id). Use only during development.")
     addGradleTaskDescription(project, "dist", "compiles GWT sources. The compiled application can be found at `$id/build/dist`: you can use any HTTP server to deploy it.")
 
@@ -49,12 +48,17 @@ class GWT : Platform {
     // Adding GWT definition to core project:
     project.files.add(
       SourceFile(
-        projectName = Core.ID, packageName = project.basic.rootPackage,
+        projectName = Core.ID,
+        packageName = project.basic.rootPackage,
         fileName = "${project.basic.mainClass}.gwt.xml",
         content = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit ${project.advanced.gwtVersion}//EN" "http://www.gwtproject.org/doctype/${project.advanced.gwtVersion}/gwt-module.dtd">
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.11.0//EN" "https://www.gwtproject.org/doctype/2.11.0/gwt-module.dtd">
 <module>
-  <source path="" />${(project.reflectedClasses + project.reflectedPackages).joinToString(separator = "\n", prefix = "\n") { "  <extend-configuration-property name=\"gdx.reflect.include\" value=\"$it\" />" }}
+  <!-- Paths to source are relative to this file and separated by slashes ('/'). -->
+  <source path="" />
+  <!-- Reflection includes may be needed for your code or library code. Each value is separated by periods ('.'). -->
+  <!-- You can include a full package by not including the name of a type at the end. -->
+${(project.reflectedClasses + project.reflectedPackages).joinToString(separator = "\n", prefix = "") { "  <extend-configuration-property name=\"gdx.reflect.include\" value=\"$it\" />" }}
 </module>"""
       )
     )
@@ -64,12 +68,23 @@ class GWT : Platform {
     if (project.hasPlatform(Shared.ID)) {
       project.files.add(
         SourceFile(
-          projectName = Shared.ID, packageName = project.basic.rootPackage,
+          projectName = Shared.ID,
+          packageName = project.basic.rootPackage,
           fileName = "Shared.gwt.xml",
           content = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit ${project.advanced.gwtVersion}//EN" "http://www.gwtproject.org/doctype/${project.advanced.gwtVersion}/gwt-module.dtd">
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.11.0//EN" "https://www.gwtproject.org/doctype/2.11.0/gwt-module.dtd">
 <module>
+  <!-- Paths to source are relative to this file and separated by slashes ('/'). -->
   <source path="" />
+
+  <!-- Reflection includes may be needed for your code or library code. Each value is separated by periods ('.'). -->
+  <!-- You can include a full package by not including the name of a type at the end. -->
+  <!-- <extend-configuration-property name="gdx.reflect.include" value="fully.qualified.TypeName" /> -->
+
+  <!-- Rarely, projects may need to include files but do not have access to the complete assets. -->
+  <!-- This happens for libraries and shared projects, typically, and the configuration goes in that project. -->
+  <!-- You can include individual files like this, and access them with Gdx.files.classpath("path/to/file.png") : -->
+  <!-- <extend-configuration-property name="gdx.files.classpath" value="path/to/file.png" /> -->
 </module>"""
         )
       )
@@ -79,14 +94,34 @@ class GWT : Platform {
     // Adding GWT definition:
     project.files.add(
       SourceFile(
-        projectName = ID, packageName = project.basic.rootPackage,
+        projectName = ID,
+        packageName = project.basic.rootPackage,
         fileName = "GdxDefinition.gwt.xml",
         content = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit ${project.advanced.gwtVersion}//EN" "http://www.gwtproject.org/doctype/${project.advanced.gwtVersion}/gwt-module.dtd">
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.11.0//EN" "https://www.gwtproject.org/doctype/2.11.0/gwt-module.dtd">
 <module rename-to="html">
+  <!-- Paths to source are relative to this file and separated by slashes ('/'). -->
   <source path="" />
+
+  <!-- "Inherits" lines are how GWT knows where to look for code and configuration in other projects or libraries. -->
 ${project.gwtInherits.sortedWith(INHERIT_COMPARATOR).joinToString(separator = "\n") { "  <inherits name=\"$it\" />" }}
+
+  <!-- You must change this if you rename packages later, or rename GwtLauncher. -->
   <entry-point class="${project.basic.rootPackage}.gwt.GwtLauncher" />
+
+  <!-- Reflection includes may be needed for your code or library code. Each value is separated by periods ('.'). -->
+  <!-- You can include a full package by not including the name of a type at the end. -->
+  <!-- This is a feature of libGDX, so these lines go after the above "inherits" that brings in libGDX. -->
+  <!-- <extend-configuration-property name="gdx.reflect.include" value="fully.qualified.TypeName" /> -->
+
+  <!-- Rarely, projects may need to include files but do not have access to the complete assets. -->
+  <!-- This happens for libraries and shared projects, typically, and the configuration goes in that project. -->
+  <!-- The value is a path, separated by forward slashes, where the root is your html project's resources root. -->
+  <!-- You can include individual files like this, and access them with Gdx.files.classpath("path/to/file.png") : -->
+  <!-- This is also a feature of libGDX, so these lines go after the above "inherits" that brings in libGDX. -->
+  <!-- <extend-configuration-property name="gdx.files.classpath" value="path/to/file.png" /> -->
+
+  <!-- You usually won't need to make changes to the rest of this. -->
   <set-configuration-property name="gdx.assetpath" value="../assets" />
   <set-configuration-property name="xsiframe.failIfScriptTag" value="FALSE"/>
   <!-- These two lines reduce the work GWT has to do during compilation and also shrink output size. -->
@@ -100,10 +135,11 @@ ${project.gwtInherits.sortedWith(INHERIT_COMPARATOR).joinToString(separator = "\
     // Adding SuperDev definition:
     project.files.add(
       SourceFile(
-        projectName = ID, packageName = project.basic.rootPackage,
+        projectName = ID,
+        packageName = project.basic.rootPackage,
         fileName = "GdxDefinitionSuperdev.gwt.xml",
         content = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit ${project.advanced.gwtVersion}//EN" "http://www.gwtproject.org/doctype/${project.advanced.gwtVersion}/gwt-module.dtd">
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.11.0//EN" "https://www.gwtproject.org/doctype/2.11.0/gwt-module.dtd">
 <module rename-to="html">
   <inherits name="${project.basic.rootPackage}.GdxDefinition" />
   <collapse-all-properties />
@@ -126,8 +162,18 @@ ${project.gwtInherits.sortedWith(INHERIT_COMPARATOR).joinToString(separator = "\
           path = path("webapp", "index.html")
         )
       )
-    } else
-      addCopiedFile(project, "webapp", "index.html")
+    } else {
+      project.files.add(
+        SourceFile(
+          projectName = id,
+          fileName = "index.html",
+          sourceFolderPath = "webapp",
+          packageName = "",
+          content = Gdx.files.internal(path("generator", id, "webapp", "index.html")).readString("UTF8")
+            .replaceFirst("@@libGDX application@@", project.basic.name)
+        )
+      )
+    }
     addSoundManagerSource(project)
     addCopiedFile(project, "webapp", "styles.css")
     addCopiedFile(project, "webapp", "WEB-INF", "web.xml")
@@ -145,7 +191,7 @@ ${project.gwtInherits.sortedWith(INHERIT_COMPARATOR).joinToString(separator = "\
       // after 1.9.11, soundmanager is no longer used
       else -> ""
     }
-    if (soundManagerSource.isNotEmpty())
+    if (soundManagerSource.isNotEmpty()) {
       project.files.add(
         CopiedFile(
           projectName = id,
@@ -153,6 +199,7 @@ ${project.gwtInherits.sortedWith(INHERIT_COMPARATOR).joinToString(separator = "\
           path = path("webapp", "soundmanager2-jsmin.js")
         )
       )
+    }
   }
 }
 
@@ -162,8 +209,18 @@ class GWTGradleFile(val project: Project) : GradleFile(GWT.ID) {
     dependencies.add("project(':${Core.ID}')")
 
     addDependency("com.badlogicgames.gdx:gdx:\$gdxVersion:sources")
-    addDependency("com.badlogicgames.gdx:gdx-backend-gwt:\$gdxVersion")
-    addDependency("com.badlogicgames.gdx:gdx-backend-gwt:\$gdxVersion:sources")
+    if (!project.advanced.gdxVersion.startsWith("1.13.") && project.advanced.gwtVersion == "2.11.0") {
+      addDependency("com.github.tommyettinger:gdx-backend-gwt:1.1210.1")
+      addDependency("com.github.tommyettinger:gdx-backend-gwt:1.1210.1:sources")
+      addDependency("com.google.jsinterop:jsinterop-annotations:2.0.2:sources")
+    } else if (!project.advanced.gdxVersion.startsWith("1.13.") && project.advanced.gwtVersion == "2.10.0") {
+      addDependency("com.github.tommyettinger:gdx-backend-gwt:1.1210.0")
+      addDependency("com.github.tommyettinger:gdx-backend-gwt:1.1210.0:sources")
+      addDependency("com.google.jsinterop:jsinterop-annotations:2.0.2:sources")
+    } else {
+      addDependency("com.badlogicgames.gdx:gdx-backend-gwt:\$gdxVersion")
+      addDependency("com.badlogicgames.gdx:gdx-backend-gwt:\$gdxVersion:sources")
+    }
   }
 
   override fun getContent(): String = """
@@ -173,6 +230,8 @@ buildscript {
   }
   dependencies {
     classpath 'org.gretty:gretty:${project.advanced.grettyVersion}'
+    classpath "org.docstr:gwt-gradle-plugin:${'$'}gwtPluginVersion"
+
   }
 }
 apply plugin: "gwt"
@@ -192,24 +251,19 @@ gwt {
   compiler.strict = true
   compiler.disableCastChecking = true
   //// The next line can be useful to uncomment if you want output that hasn't been obfuscated.
-//  compiler.style = org.wisepersist.gradle.plugins.gwt.Style.DETAILED
-}
+//  compiler.style = org.docstr.gradle.plugins.gwt.Style.DETAILED
+${if (project.advanced.gwtVersion == "2.10.0" || project.advanced.gwtVersion == "2.11.0") "\n  sourceLevel = 1.11\n" else ""}}
 
 dependencies {
 ${joinDependencies(dependencies)}
-//// You can use the lines below instead of the "com.badlogicgames.gdx:gdx-backend-gwt" dependencies.
-//// If you do, follow the steps at https://github.com/tommyettinger/gdx-backends#gwt-2902100-support
-//// and you can use GWT 2.10.0, which gives you access to Java 11 language features.
-//// These releases use libGDX 1.11.0, and are not compatible with other versions.
-//	implementation "com.github.tommyettinger:gdx-backend-gwt:1.1100.0"
-//	implementation "com.github.tommyettinger:gdx-backend-gwt:1.1100.0:sources"
 }
 
 import org.akhikhl.gretty.AppBeforeIntegrationTestTask
-import org.wisepersist.gradle.plugins.gwt.GwtSuperDev
+import org.docstr.gradle.plugins.gwt.GwtSuperDev
 
 gretty.httpPort = 8080
-gretty.resourceBase = project.buildDir.path + "/gwt/draftOut"
+// The line below will need to be changed only if you change the build directory to something other than "build".
+gretty.resourceBase = "${'$'}{project.layout.buildDirectory.asFile.get().absolutePath}/gwt/draftOut"
 gretty.contextPath = "/"
 gretty.portPropertiesFileName = "TEMP_PORTS.properties"
 
@@ -296,13 +350,15 @@ task dist(dependsOn: [clean, compileGwt]) {
 task addSource {
   doLast {
     sourceSets.main.compileClasspath += files(project(':core').sourceSets.main.allJava.srcDirs)
-    ${if (project.hasPlatform(Shared.ID)) "sourceSets.main.compileClasspath += files(project(':shared').sourceSets.main.allJava.srcDirs)" else ""}
+    sourceSets.main.compileClasspath += files("../core/build/generated/sources/annotationProcessor/java/main")
+${if (project.hasPlatform(Shared.ID)) "    sourceSets.main.compileClasspath += files(project(':shared').sourceSets.main.allJava.srcDirs)" else ""}
   }
 }
 
 task distZip(type: Zip, dependsOn: dist){
   //// This uses the output of the dist task, which removes the superdev button from index.html .
   from(outputPath)
+  archiveVersion = projectVersion
   archiveBaseName.set("${'$'}{appName}-dist")
   //// The result will be in html/build/ with a name containing "-dist".
   destinationDirectory.set(file("build"))
@@ -312,13 +368,14 @@ tasks.compileGwt.dependsOn(addSource)
 tasks.draftCompileGwt.dependsOn(addSource)
 tasks.checkGwt.dependsOn(addSource)
 
-// You can change the version below to JavaVersion.VERSION_11 if you use the 2.9.0 or 2.10.0 backends.
-sourceCompatibility = JavaVersion.VERSION_1_8
+java.sourceCompatibility = ${if (project.advanced.gwtVersion == "2.10.0" || project.advanced.gwtVersion == "2.11.0") "JavaVersion.VERSION_11" else "JavaVersion.VERSION_1_8"}
+java.targetCompatibility = ${if (project.advanced.gwtVersion == "2.10.0" || project.advanced.gwtVersion == "2.11.0") "JavaVersion.VERSION_11" else "JavaVersion.VERSION_1_8"}
 sourceSets.main.java.srcDirs = [ "src/main/java/" ]
 
 eclipse.project.name = appName + "-html"
 """ + (
-    if (project.extensions.isSelected("lombok")) """
+    if (project.extensions.isSelected("lombok")) {
+      """
 
 configurations { lom }
 dependencies {
@@ -344,6 +401,9 @@ superDev {
     jvmArgs "-javaagent:${'$'}{configurations.lom.asPath}=ECJ"
   }
 }
-""" else ""
+"""
+    } else {
+      ""
+    }
     )
 }

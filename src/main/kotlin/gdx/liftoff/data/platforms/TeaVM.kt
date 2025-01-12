@@ -23,6 +23,7 @@ class TeaVM : Platform {
 
   override fun initiate(project: Project) {
     project.properties["gdxTeaVMVersion"] = project.advanced.gdxTeaVMVersion
+    project.properties["teaVMVersion"] = project.advanced.teaVMVersion
     addGradleTaskDescription(
       project,
       "run",
@@ -40,8 +41,13 @@ class TeaVMGradleFile(val project: Project) : GradleFile(TeaVM.ID) {
   init {
     dependencies.add("project(':${Core.ID}')")
 
-    addDependency("com.github.xpenatan.gdx-teavm:backend-web:\$gdxTeaVMVersion")
     addDependency("com.github.xpenatan.gdx-teavm:backend-teavm:\$gdxTeaVMVersion")
+    addDependency("org.teavm:teavm-tooling:\$teaVMVersion")
+    addDependency("org.teavm:teavm-core:\$teaVMVersion")
+    addDependency("org.teavm:teavm-classlib:\$teaVMVersion")
+    addDependency("org.teavm:teavm-jso:\$teaVMVersion")
+    addDependency("org.teavm:teavm-jso-apis:\$teaVMVersion")
+    addDependency("org.teavm:teavm-jso-impl:\$teaVMVersion")
   }
 
   override fun getContent() = """plugins {
@@ -58,19 +64,27 @@ sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 project.ext.mainClassName = '${project.basic.rootPackage}.teavm.TeaVMBuilder'
 eclipse.project.name = appName + '-teavm'
 
+// This must be at least 11, and no higher than the JDK version this project is built with.
+java.targetCompatibility = "${project.advanced.javaVersion}"
+// This should probably be equal to targetCompatibility, above. This only affects the TeaVM module.
+java.sourceCompatibility = "${project.advanced.javaVersion}"
+
+
 dependencies {
 ${joinDependencies(dependencies)}
 }
 
-task buildJavaScript(dependsOn: classes, type: JavaExec) {
+tasks.register('buildJavaScript', JavaExec) {
+  dependsOn classes
   setDescription("Transpile bytecode to JavaScript via TeaVM")
   mainClass.set(project.mainClassName)
   setClasspath(sourceSets.main.runtimeClasspath)
 }
 build.dependsOn buildJavaScript
 
-task run(dependsOn: [buildJavaScript, ":${TeaVM.ID}:jettyRun"]) {
-  setDescription("Run the JavaScript application hosted via a local Jetty server at http://localhost:8080/")
+tasks.register("run") {
+  description = "Run the JavaScript application hosted via a local Jetty server at http://localhost:8080/"
+  dependsOn(buildJavaScript, tasks.named("jettyRun"))
 }
 """
 }

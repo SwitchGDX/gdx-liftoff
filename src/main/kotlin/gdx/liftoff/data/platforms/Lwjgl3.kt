@@ -1,6 +1,7 @@
 package gdx.liftoff.data.platforms
 
 import gdx.liftoff.data.files.CopiedFile
+import gdx.liftoff.data.files.SourceFile
 import gdx.liftoff.data.files.gradle.GradleFile
 import gdx.liftoff.data.files.path
 import gdx.liftoff.data.project.Project
@@ -17,10 +18,10 @@ class Lwjgl3 : Platform {
   }
 
   override val id = ID
-  override val description = "Primary desktop platform using LWJGL3."
+  override val description = "Primary desktop platform using LWJGL3; was called 'desktop' in older docs."
   override val order = ORDER
 
-  // override val isStandard = true // true is the default, and we want to prefer this to desktop
+  // override val isStandard = true
   override fun createGradleFile(project: Project): GradleFile = Lwjgl3GradleFile(project)
   override fun initiate(project: Project) {
     // Adding game icons:
@@ -52,6 +53,70 @@ class Lwjgl3 : Platform {
       "jar",
       "builds application's runnable jar, which can be found at `$id/build/libs`."
     )
+    project.properties["graalHelperVersion"] = "2.0.1"
+
+    project.files.add(
+      SourceFile(
+        projectName = Lwjgl3.ID,
+        fileName = "nativeimage.gradle",
+        content =
+"""
+project(":lwjgl3") {
+  apply plugin: "org.graalvm.buildtools.native"
+
+  graalvmNative {
+    binaries {
+      main {
+        imageName = appName
+        mainClass = project.mainClassName
+        requiredVersion = '23.0'
+        buildArgs.add("-march=compatibility")
+        jvmArgs.addAll("-Dfile.encoding=UTF8")
+        sharedLibrary = false
+        resources.autodetect()
+      }
+    }
+  }
+
+  run {
+    doNotTrackState("Running the app should not be affected by Graal.")
+  }
+
+  // Modified from https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/ ; thanks again, Lyze!
+  // This creates a resource-config.json file based on the contents of the assets folder (and the libGDX icons).
+  // This file is used by Graal Native to embed those specific files.
+  // This has to run before nativeCompile, so it runs at the start of an unrelated resource-handling command.
+  generateResourcesConfigFile.doFirst {
+    def assetsFolder = new File("${'$'}{project.rootDir}/assets/")
+    def lwjgl3 = project(':lwjgl3')
+    def resFolder = new File("${'$'}{lwjgl3.projectDir}/src/main/resources/META-INF/native-image/${'$'}{lwjgl3.ext.appName}")
+    resFolder.mkdirs()
+    def resFile = new File(resFolder, "resource-config.json")
+    resFile.delete()
+    resFile.append(
+            ""${'"'}{
+  "resources":{
+  "includes":[
+    {
+      "pattern": ".*(""${'"'})
+    // This adds every filename in the assets/ folder to a pattern that adds those files as resources.
+    fileTree(assetsFolder).each {
+      // The backslash-Q and backslash-E escape the start and end of a literal string, respectively.
+      resFile.append("\\\\Q${'$'}{it.name}\\\\E|")
+    }
+    // We also match all of the window icon images this way and the font files that are part of libGDX.
+    resFile.append(
+            ""${'"'}libgdx.+\\\\.png|lsans.+)"
+    }
+  ]},
+  "bundles":[]
+}""${'"'}
+    )
+  }
+}
+"""
+      )
+    )
   }
 }
 
@@ -65,32 +130,49 @@ class Lwjgl3GradleFile(val project: Project) : GradleFile(Lwjgl3.ID) {
     addDependency("com.badlogicgames.gdx:gdx-platform:\$gdxVersion:natives-desktop")
   }
 
-  override fun getContent(): String = """buildscript {
+  // language=groovy
+  override fun getContent(): String = """
+buildscript {
   repositories {
     gradlePluginPortal()
   }
   dependencies {
-// using jpackage only works if the JDK version is 14 or higher.
-// your JAVA_HOME environment variable may also need to be a JDK with version 14 or higher.
-    if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_14)) {
-      classpath "org.beryx:badass-runtime-plugin:1.12.7"
+    classpath "io.github.fourlastor:construo:1.5.1"
+    if(enableGraalNative == 'true') {
+      classpath "org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.28"
     }
   }
 }
-if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_14)) {
-  apply plugin: 'org.beryx.runtime'
+plugins {
+  id "application"
 }
-else {
-  apply plugin: 'application'
-}
+apply plugin: 'io.github.fourlastor.construo'
+${if (project.rootGradle.plugins.contains("kotlin")) "apply plugin: 'org.jetbrains.kotlin.jvm'\n" else ""}
+
+import io.github.fourlastor.construo.Target
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 mainClassName = '${project.basic.rootPackage}.lwjgl3.Lwjgl3Launcher'
+application.setMainClass(mainClassName)
 eclipse.project.name = appName + '-lwjgl3'
-sourceCompatibility = ${project.advanced.desktopJavaVersion}
-
+java.sourceCompatibility = ${project.advanced.desktopJavaVersion}
+java.targetCompatibility = ${project.advanced.desktopJavaVersion}
+if (JavaVersion.current().isJava9Compatible()) {
+        compileJava.options.release.set(${project.advanced.desktopJavaVersion})
+}
+${if (project.rootGradle.plugins.contains("kotlin")) "kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_" + (if (project.advanced.desktopJavaVersion == "8") "1_8" else project.advanced.desktopJavaVersion) + ")\n" else ""}
 dependencies {
-${joinDependencies(dependencies)}}
+${joinDependencies(dependencies)}
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:${'$'}graalHelperVersion"
+""" +
+    (if (project.extensions.isSelected("gdx-box2d")) "      implementation \"io.github.berstanio:gdx-svmhelper-extension-box2d:\$graalHelperVersion\"\n" else "") +
+    (if (project.extensions.isSelected("gdx-bullet")) "      implementation \"io.github.berstanio:gdx-svmhelper-extension-bullet:\$graalHelperVersion\"\n" else "") +
+    (if (project.extensions.isSelected("gdx-controllers-lwjgl3")) "      implementation \"io.github.berstanio:gdx-svmhelper-extension-controllers-lwjgl3:\$graalHelperVersion\"\n" else "") +
+    (if (project.extensions.isSelected("gdx-freetype")) "      implementation \"io.github.berstanio:gdx-svmhelper-extension-freetype:\$graalHelperVersion\"\n" else "") +
+    """    }
+
+}
 
 def os = System.properties['os.name'].toLowerCase()
 
@@ -98,17 +180,12 @@ run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)
 
-  if (os.contains('mac')) {
-    // Required to run LWJGL3 Java apps on MacOS
-    jvmArgs += "-XstartOnFirstThread"
-  }
+  if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
 
 jar {
-// sets the name of the .jar file this produces to the name of the game or app.
-  archiveBaseName.set(appName)
-// using 'lib' instead of the default 'libs' appears to be needed by jpackageimage.
-  destinationDirectory = file("${'$'}project.buildDir/lib")
+// sets the name of the .jar file this produces to the name of the game or app, with the version after.
+  archiveFileName.set("${'$'}{appName}-${'$'}{projectVersion}.jar")
 // the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
   duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
   dependsOn configurations.runtimeClasspath
@@ -116,7 +193,7 @@ jar {
 // these "exclude" lines remove some unnecessary duplicate files in the output JAR.
   exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
   dependencies {
-    exclude('META-INF/INDEX.LIST', 'META-INF/maven/**')
+    exclude('META-INF/INDEX.LIST', 'META-INF/maven/**'${if (project.advanced.gdxVersion == "1.13.0") ", 'windows/x86/**'" else ""})
   }
 // setting the manifest makes the JAR runnable.
   manifest {
@@ -128,42 +205,69 @@ jar {
   }
 }
 
-if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_14)) {
-  jpackageImage.dependsOn jar
+construo {
+    // name of the executable
+    name.set(appName)
+    // human-readable name, used for example in the `.app` name for macOS
+    humanName.set(appName)
+    // Optional, defaults to project version property
+    version.set("${'$'}projectVersion")
 
-  runtime {
-    options.set(['--strip-debug',
-           '--compress', '2',
-           '--no-header-files',
-           '--no-man-pages',
-           '--strip-native-commands',
-           '--vm', 'server'])
-// you could very easily need more modules than this one.
-// use the lwjgl3:suggestModules task to see which modules may be needed.
-    modules.set([
-        'jdk.unsupported'
-    ])
-    distDir.set(file(buildDir))
-    jpackage {
-      imageName = appName
-// you can set this to false if you want to build an installer, or keep it as true to build just an app.
-      skipInstaller = true
-// this may need to be set to a different path if your JAVA_HOME points to a low JDK version.
-      jpackageHome = javaHome.getOrElse("")
-      mainJar = jar.archiveFileName.get()
-      if (os.contains('win')) {
-        imageOptions = ["--icon", "icons/logo.ico"]
-      } else if (os.contains('nix') || os.contains('nux') || os.contains('bsd')) {
-        imageOptions = ["--icon", "icons/logo.png"]
-      } else if (os.contains('mac')) {
-        imageOptions = ["--icon", "icons/logo.icns", "--java-options", "\"-XstartOnFirstThread\""]
+    targets.configure {
+      create("linuxX64", Target.Linux) {
+        architecture.set(Target.Architecture.X86_64)
+        jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.12_7.tar.gz")
+      }
+      create("macM1", Target.MacOs) {
+        architecture.set(Target.Architecture.AARCH64)
+        jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.12_7.tar.gz")
+        // macOS needs an identifier
+        identifier.set("${project.basic.rootPackage}." + appName)
+        // Optional: icon for macOS
+        macIcon.set(project.file("icons/logo.icns"))
+      }
+      create("macX64", Target.MacOs) {
+        architecture.set(Target.Architecture.X86_64)
+        jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_mac_hotspot_17.0.12_7.tar.gz")
+        // macOS needs an identifier
+        identifier.set("${project.basic.rootPackage}." + appName)
+        // Optional: icon for macOS
+        macIcon.set(project.file("icons/logo.icns"))
+      }
+      create("winX64", Target.Windows) {
+        architecture.set(Target.Architecture.X86_64)
+        jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.zip")
+        // Uncomment the next line to show a console when the game runs, to print messages.
+        //useConsole.set(true)
+      }
+    }
+}
+
+// Equivalent to the jar task; here for compatibility with gdx-setup.
+tasks.register('dist') {
+  dependsOn 'jar'
+}
+
+distributions {
+  main {
+    contents {
+      into('libs') {
+        project.configurations.runtimeClasspath.files.findAll { file ->
+          file.getName() != project.tasks.jar.outputs.files.singleFile.name
+        }.each { file ->
+          exclude file.name
+        }
       }
     }
   }
 }
 
-// Equivalent to the jar task; here for compatibility with gdx-setup.
-task dist(dependsOn: [jar]) {
+startScripts.dependsOn(':lwjgl3:jar')
+startScripts.classpath = project.tasks.jar.outputs.files
+
+if(enableGraalNative == 'true') {
+  apply from: file("nativeimage.gradle")
 }
-"""
+
+    """.trimIndent()
 }

@@ -23,6 +23,7 @@ class Core : Platform {
   }
 
   override fun initiate(project: Project) {
+    project.properties["enableGraalNative"] = "false"
     // Core has no external dependencies by default.
   }
 }
@@ -40,7 +41,11 @@ class CoreGradleFile : GradleFile(Core.ID) {
 eclipse.project.name = appName + '-core'
 
 dependencies {
-${joinDependencies(dependencies, "api")}}
+${joinDependencies(dependencies, "api")}
+  if(enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-annotations:${'$'}graalHelperVersion"
+  }
+}
 """
   }
 }

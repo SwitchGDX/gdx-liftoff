@@ -1,30 +1,35 @@
 # `gdx-liftoff` Guide
 
 If you've used libGDX for even a short time, you've probably used the official `gdx-setup.jar` made by the libGDX team. It's seen
-major improvements lately, but it still lags behind in some areas -- it places assets in different locations depending on how you
-initially configured your project, and it is very far behind the times on its default LWJGL version and on third-party extensions.
-The official setup may transition to a web-based tool soon, but any user of the Internet can recall times when
-formerly-reliable services went offline or had outages. This project provides another alternative setup tool based on
+major improvements lately, but it still lags behind in some areas -- it uses an outdated Gradle version most of the time,
+it has relatively few third-party extensions available, and some of the Gradle configuration could be better, especially for HTML
+projects and projects that want to use jpackage or Graal Native Image to distribute executables.
+This project provides another alternative setup tool based on
 [SquidSetup](https://github.com/tommyettinger/SquidSetup), but removing the close ties to the SquidLib libraries to make it more general-use. Using SquidSetup's
-code, which is built on czyzby's code, gives us working projects that use Gradle 7.6, a bit ahead of the official setup and far ahead of 4.0.2 for czyzby's gdx-setup.
-The current Gradle version is 7.6 at the time of writing, and since gdx-liftoff 1.11.0.5, new projects use that 7.6 version.
-This allows new projects to "just work" on machines where Java 8 through 18 could be the default, and the moderate amount of configuration
-changes needed for Gradle 7.x are all handled by gdx-liftoff. Thanks to the Gretty plugin's latest release, Gradle 7.x
+code, which is built on [czyzby's code](https://github.com/czyzby/gdx-setup), gives us working projects that use Gradle
+8.5, ahead of the official setup and farther ahead of 4.0.2 for czyzby's gdx-setup. The current Gradle version is 8.5 at the time of writing.
+This allows new projects to "just work" on machines where Java 8 through 21 could be the default, and the moderate amount of configuration
+changes needed for Gradle 8.x are all handled by gdx-liftoff. Thanks to the Gretty plugin's latest release, Gradle 8.x
 now works well with the HTML platform, without additional quirky configuration (earlier versions of Liftoff needed that).
-Currently, gdx-liftoff projects depend on libGDX 1.11.0 by default, and allow using earlier versions or snapshots as well.
-The current version of libGDX is 1.11.0. You can choose any released version of
-libGDX (or a nightly version) in the Advanced tab of the program window; it will be downloaded if needed when you import
+Currently, gdx-liftoff projects depend on libGDX 1.13.1 by default, and allow using earlier versions or snapshots as well.
+The current version of libGDX is 1.13.1, and it doesn't seem to have any of the problems that 1.13.0 introduced.
+Using 1.13.0 was attempted earlier, but there are frequent antivirus software complaints about the version of LWJGL it
+uses (3.3.4). You should either use 1.13.1 or 1.12.1 for most purposes, though porting older code might need other versions.
+You can choose any released version of libGDX (or a nightly version) in the Advanced tab of the program window; it will
+be downloaded if needed when you import
 the Gradle project into your IDE or run one of most Gradle tasks. If you're updating from an older libGDX version, see
 [the official migration guide](https://libgdx.com/news/2021/04/the-ultimate-migration-guide).
 
-Projects default to using LWJGL3 instead of LWJGL2 (the old 'desktop' platform), since code tends to be very similar between the two, but LWJGL3 generally offers
+Projects default to using LWJGL3 instead of LWJGL2 (the old 'desktop' platform), since code tends to be very similar
+between the two, but LWJGL3 generally offers
 more features. Somewhat confusingly, gdx-setup used LWJGL2 for its desktop platform until recently, but now uses LWJGL3 and
 still calls it 'desktop'. Liftoff projects can have both LWJGL2 and LWJGL3 modules, which shouldn't be needed for too much
 longer, but is sometimes needed now. The "lwjgl2" module is LWJGL2, and "lwjgl3" is, well, LWJGL3. **If following a tutorial**,
 you may need to change mentions of the "desktop" or "lwjgl2" module to "lwjgl3". This code is tested
 for compatibility with GWT, including the various changes that Gradle needs with this version. It is sometimes tested on Android,
-but Android Studio is often incompatible with recent Gradle releases, and Android certainly doesn't support Java 12 or higher features across the board. Issues
-with iOS and RoboVM will have to be addressed by someone sending a pull request, because I can't reproduce any iOS issues without an iOS device.
+but Android Studio is often incompatible with recent Gradle releases, and Android certainly doesn't support Java 12 or
+higher features across the board. Issues with iOS and RoboVM will have to be addressed by someone sending a pull
+request, because I can't reproduce any iOS issues without an iOS device.
 
 The current version of gdx-liftoff uses LWJGL3 internally; 1.9.10.5 used LWJGL2 in an attempt to be compatible with libGDX's TexturePacker, but there seem to be
 more compatibility issues with LWJGL2, maybe since it hasn't been updated in 5+ years, than with LWJGL3. This perhaps validates the decision to default to LWJGL3
@@ -33,11 +38,16 @@ for new projects generated by gdx-liftoff.
 Using the latest Gradle, as gdx-liftoff tries to always do, is important when there are ongoing security concerns. The
 latest Gradle versions are all pre-configured to avoid vulnerable versions of log4j (which had the serious "log4shell"
 vulnerability exploited starting in December 2021). We don't need the mitigations that earlier versions of gdx-liftoff
-used to avoid vulnerable log4j versions, now that Gradle has updated and considers this automatically. 
+used to avoid vulnerable log4j versions, now that Gradle has updated and considers this automatically.
+
+LWJGL 3.3.4 and 3.3.5 were problematic for a variety of reasons, and if you choose to update LWJGL to a different version
+than what Liftoff generates (currently LWJGL 3.3.3 for any project using libGDX 1.12.1 or 1.13.1), you should use 3.3.6
+and be aware that it has some problems with heavy audio over-logging on macOS. Disabling audio in Lwjgl3Launcher should
+prevent the logging issue, if you have no audio to begin with. That's what Liftoff 1.13.1.0 does.
 
 ## Usage
 
-- Get the latest `gdx-liftoff.jar` from the [Releases tab](https://github.com/tommyettinger/gdx-liftoff/releases) of this project.
+- Get the latest `gdx-liftoff.jar` from the [Releases tab](https://github.com/libgdx/gdx-liftoff/releases) of this project.
     - If you have an older gdx-liftoff.jar, or you aren't sure when it was released, getting the current latest is a good idea.
 - Regardless of what platforms you intend to target, make sure the steps
   [described by the libGDX wiki here](https://libgdx.com/wiki/start/setup)
@@ -45,15 +55,15 @@ used to avoid vulnerable log4j versions, now that Gradle has updated and conside
 - Run the JAR. Plug in whatever options you see fit:
     - For the Platforms tab, LWJGL3 starts enabled by default (it works on all desktop/laptop platforms), and you can
       manually check other platforms to match your needs.
-      If you target iOS, it will only build on a MacOS machine. Downloading iOS (and/or HTML) dependencies can take some
+      If you target iOS, it will only build on a macOS machine. Downloading iOS (and/or HTML) dependencies can take some
       time, so just check the platforms you want to target. You can re-run the setup, make a new project with the same
       settings (in a different folder), and copy in the existing code if you want to quickly change platforms.
         - LWJGL2 and/or LWJGL3 should usually be checked, so you can test on the same computer you develop on.
             - LWJGL3 is almost the same as LWJGL2, but because it has better support for new hardware
               (such as high-DPI displays), it should probably be preferred. It also allows multiple windows and drag+drop.
                 - LWJGL3 itself supports Linux on arm32 and arm64 hardware, and libGDX since version 1.9.13 (current is
-                  1.11.0) also supports ARM Linux on desktop platforms.
-                - The new ARM Macs are now supported as of libGDX 1.11.0 when using the LWJGL3 backend.
+                  1.13.0) also supports ARM Linux on desktop platforms.
+                - The new ARM Macs are now supported as of libGDX 1.11.0 or later when using the LWJGL3 backend.
                   LWJGL2 does appear to work via macOS "Rosetta" emulation, though.
             - LWJGL2 should mostly be preferred if you need to also depend on gdx-tools, such as if you need to run the
               texture packer at runtime. Some machines have issues with an inconsistent or very high framerate with LWJGL3,
@@ -72,26 +82,27 @@ used to avoid vulnerable log4j versions, now that Gradle has updated and conside
                       with Java 17, and this may be a good idea for distribution because of some speed and stability
                       improvements in that JVM release. 17 is also an LTS release, and those tend to get more adoption.
                     - Java 18 is out now, and supported by the current Gradle, but it isn't an LTS release.
-        - iOS should probably *not* be checked if you aren't running MacOS and don't intend to later build an iOS
+        - iOS should probably *not* be checked if you aren't running macOS and don't intend to later build an iOS
           app on a Mac. It needs some large dependencies to be downloaded when you first import the project.
             - If you have a Mac that is set up for iOS development, please try to generate any project and see if it gets
-              made correctly! We've had some [good feedback](https://github.com/tommyettinger/gdx-liftoff/issues/28) on iOS
+              made correctly! We've had some [good feedback](https://github.com/libgdx/gdx-liftoff/issues/28) on iOS
               projects, but any extra usage info would help ensure that liftoff is ready for any libGDX usage. It isn't a
-              typical usage for a [GitHub Issue](https://github.com/tommyettinger/gdx-liftoff/issues), but sending any
+              typical usage for a [GitHub Issue](https://github.com/libgdx/gdx-liftoff/issues), but sending any
               feedback as an issue, whether it's "iOS projects work for me" or "iOS support is broken" would really help.
             - Support for iOS should be better as of 1.10.0.3, but it could still use more testing. There are changes in
               libGDX 1.10.0 that should really help iOS projects out of the box; if you encounter screen trouble with any
               template applications, first add a Viewport like you would for any other platform, and see if there is still
               an issue. If you still have clipping or a smaller view area, post an issue. Several changes happened in
               libGDX 1.10.0 to improve behavior on iOS, and gdx-liftoff may need to apply some changes to template code
-              for iOS projects to work more cleanly with libGDX 1.10.0.
+              for iOS projects to work more cleanly with libGDX 1.10.0 (and newer).
         - Android should only be checked if you've set up your computer for Android development. Since gdx-liftoff uses
-          Gradle 7.6, having an Android project present shouldn't interfere with other platforms or IDE integration, as
-          long as your IDE supports Gradle 7.6 (current Android Studio and IDEA both support it).
-            - **You must set your project's JDK to a version 11 or higher** to use Android, due to a new requirement of the
-              Android Gradle Plugin used by Android Studio and IDEA. JDK 11 is the most versatile option right now, because
+          Gradle 8.11.1, having an Android project present shouldn't interfere with other platforms or IDE integration, as
+          long as your IDE supports Gradle 8.11.1 (current Android Studio and IDEA both support it).
+            - **You must set your project's JDK to a version 17 or higher** to use Android, due to a new requirement of the
+              Android Gradle Plugin used by Android Studio and IDEA. JDK 17 is the most versatile option right now, because
               it can be used with gdx-setup projects and Android projects. JDK 17 or 18 will work. You could have to
-              open older projects, so having JDK 11 installed is a good idea.
+              open older projects, so having JDK 17 installed is a good idea. Java 21 should work here, but will be completely
+              broken if you try to use it with gdx-setup projects at this point in time.
             - Having an Android module in a larger project changes some of IDEA's features, including disabling hot-swap.
               Some libGDX developers take the approach of having a separate Android-only project, keeping desktop platforms
               completely disconnected from Android. This also lets the assets be different, so it has other advantages.
@@ -103,6 +114,11 @@ used to avoid vulnerable log4j versions, now that Gradle has updated and conside
             - If you are using an Android Studio version before 4.2 or an IDEA version before 2021.2, you can set the
               Android Gradle Plugin on the Advanced tab to a lower version, like 4.0.2, that is compatible with that older
               IDE version.
+            - The Android Gradle Plugin (AGP) version is currently set at 8.1.4 and is not configurable from within Liftoff.
+              This was required because IDEA's and Android Studio's AGP Upgrade Assistant requires the AGP version to be part
+              of the dependency String, and not in a properties file (which is what Liftoff usually uses). On the plus side,
+              this lets you use the AGP Upgrade Assistant now. It isn't always a great idea, particularly if you need to use
+              both Android Studio and IDEA (IDEA usually supports only a lower version of AGP than what Android Studio can use).
         - HTML is a more-involved target, with some perfectly-normal code on all other platforms acting completely
           different on HTML due to the tool used, Google Web Toolkit (GWT). It's almost always possible to work around
           these differences and make things like random seeds act the same on all platforms, but it takes work. Mostly,
@@ -110,10 +126,8 @@ used to avoid vulnerable log4j versions, now that Gradle has updated and conside
           would on desktop, and `long` not being visible to reflection. See [this small guide to GWT](https://libgdx.com/wiki/html5-backend-and-gwt-specifics)
           for more. It's very likely that you won't notice any difference unless you try to make behavior identical on GWT
           and other platforms, and even then there may be nothing apparent.
-            - GWT 2.9.0 is available but doesn't integrate with libGDX by default; there's a third-party [replacement to the
-              official GWT backend](https://github.com/tommyettinger/gdx-backends#11000) that supports it with libGDX
-              1.10.0. Using GWT 2.9.0 allows Java 11's `var` keyword to be used, plus other Java 11 features, but doesn't
-              change much of what's available from the standard library.
+            - GWT 2.11.0 is available and used by default with libGDX 1.13.0 and later .
+            - GWT 2.11.0 is also available and used by default with libGDX 1.12.1, via a third-party backend. The changes in that backend are almost identical to the ones made in 1.13.0 .
     - For dependencies, you don't need libGDX checked (the tool is ready to download libGDX and set it as a
       dependency in all cases).
         - There are lots of potential dependencies you can add, some official but most third-party (unofficial).
@@ -139,18 +153,28 @@ used to avoid vulnerable log4j versions, now that Gradle has updated and conside
       project. Classic will show a white screen with a pixel-style face when you run, so it can be good to verify that
       a project works, while ApplicationAdapter is probably the easiest to bring an existing game into. The super-koalio
       demo is from libGDX's tests, and may act as a good way to test input and basic graphics in a new project.
-    - In Advanced, you can set the libGDX version (it defaults to 1.11.0, but can be set lower or higher) and
+    - In Advanced, you can set the libGDX version (it defaults to 1.13.1, but can be set lower or higher) and
       various other versions, including the default Java compatibility. Typically, `Java version` is the minimum across
       all platforms, and should be 7 or more (8 is generally safe). You can set `Desktop Java version` to any version at
       least equal to `Java version`, and similarly for `Server Java version`; these only affect the LWJGL2/LWJGL3 and
-      Server modules, respectively. You can set `Java version` to as high as 18 if you have Java 18 installed, or
-      similarly for Java 11, 12, 13, 14, 15, 16, or 17, but it will require users to also have Java of that version, or for you
+      Server modules, respectively. You can set `Java version` to as high as 23 if you have Java 23 installed, or
+      similarly for Java 11, 12, 13... 21, and 22, but it will require users to also have Java of that version, or for you
       to distribute a JRE of the appropriate version with your game.
-        - Distributing Java 14, 15, 16, 17, or 18 is much easier now thanks to Beryx'
-          "[Badass Runtime Plugin](https://github.com/raeleus/skin-composer/wiki/Deploying-libGDX-with-jpackage-and-Badass-Runtime),"
-          which may be included in future versions to help ease the process of releasing a game.
+        - Construo makes distributing projects as native executables much easier. You should usually use a Java 17 JDK
+          as your Gradle JVM when you use Construo, but you can use newer JDKs if you change the URLs in lwjgl3/build.gradle
+          to any JDK download link, such as one from the default Temurin OpenJDK project, with the same version as your
+          chosen JDK.
+          - Construo executables for x64 Windows can be built with the `lwjgl3:packageWinX64`. Similar tasks exist for
+            MacX64, MacM1, and LinuxX64. Running them takes a little while on the first try, since they need to download
+            a few-hundred-MB JDK. Construo will minimize that JDK so the resulting file will be much smaller. The output
+            will be in `lwjgl3/build/dist/` for the .zip files you can distribute that include their own JDK. There will
+            also be .jar files in nearby folders that you can distribute to places like macOS without needing signing or
+            notarizing on a Mac.
         - HTML projects this generates always use language level 8, even if the JDK is newer. A comment in
-          `html/build.gradle` provides some instructions for how to use an alternate backend and use as new as Java 11. 
+          `html/build.gradle` provides some instructions for how to use an alternate backend and use as new as Java 11.
+        - iOS projects using RoboVM are currently limited to at most language level 8, and can't use any APIs that were
+          added in Java 8 or later. This can be a severe limitation, and some users choose language level and API level
+          7 to avoid accidentally using Java 8 APIs. The iOS MOE backend can use much more recent Java features and APIs.
 - Click generate, and very soon a window should pop up with instructions for what to do.
     - Generation is very fast here, relative to gdx-setup, because it doesn't run Gradle tasks at this point. When you
       see `SETUP COMPLETE` in green, the build is done; at the time you import the generated `build.gradle` project
@@ -171,10 +195,10 @@ see [libGDX's documentation](https://libgdx.com/wiki/start/import-and-running).
 - If you had the LWJGL3 (or LWJGL2) option checked in the setup, and you chose a non-empty
   template in the Templates tab, you can run the LWJGL3 or LWJGL2 module right away.
     - You can build a runnable jar that includes all it needs to run using
-      `lwjgl3 -> Tasks -> build -> jar`; this jar will be in `lwjgl3/build/libs/` when it finishes.
-      Note: this is the command-line option `gradlew lwjgl3:jar`, not the `dist` command
-      used by the official setup jar. Substitute `lwjgl2` where `lwjgl3` is if you use the legacy
-      LWJGL2 version.
+      `lwjgl3 -> Tasks -> build -> jar`; this jar will be in `lwjgl3/build/lib/` when it finishes.
+      Note: this is the command-line option `gradlew lwjgl3:jar`, but the `dist` command
+      used by the official setup jar will still work as an alias. Substitute `lwjgl2` where `lwjgl3` is if you use
+      the legacy LWJGL2 version.
 - If you had the Android option checked in the setup and have a non-empty template,
   you can try to run the Android module on an emulator or a connected Android device.
 - If you had the GWT option checked in the setup and have a non-empty template,
@@ -213,8 +237,8 @@ other projects or older versions.
 
 - MacOS does not like the legacy desktop apps, showing all sorts of visual glitches.
   It seems to work fine with LWJGL3, in part because that platform had special attention
-  paid to it so the `gradlew lwjgl3:run` command can work at all on MacOS.
-    - Consider adding the third-party extension Guacamole to handle a special MacOS/LWJGL3 requirement (it
+  paid to it so the `gradlew lwjgl3:run` command can work at all on macOS.
+    - Consider adding the third-party extension Guacamole to handle a special macOS/LWJGL3 requirement (it
       needs `-XstartOnFirstThread` to be passed to the `java` command, but Guacamole can handle this for you
       and your users).
     - Apps for end-users have to include a bundled JRE to be distributed via the Mac App Store, and it's generally a
@@ -229,6 +253,9 @@ other projects or older versions.
       gdx-liftoff will pre-fill the Android SDK path with `ANDROID_SDK_ROOT` if it hasn't been set yet, but will use the
       last used path if there's a historical path. You can change any and all settings history by either editing
       `~/.prefs/gdx-liftoff-prefs` or just deleting that file and having gdx-liftoff remake it.
+    - The Android SDK version is now set at exactly 34, but this should change in future versions of Liftoff as
+      new versions of the Android OS require updates. Currently, Google play requires a target SDK of 34 for newly
+      submitted projects.
 
 ## Contributions
 

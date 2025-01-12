@@ -52,12 +52,18 @@ class Lwjgl2GradleFile(val project: Project) : GradleFile(Lwjgl2.ID) {
   }
 
   override fun getContent(): String = """apply plugin: 'application'
+${if (project.rootGradle.plugins.contains("kotlin")) "apply plugin: 'org.jetbrains.kotlin.jvm'\n" else ""}
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
-mainClassName = '${project.basic.rootPackage}.desktop.DesktopLauncher'
-eclipse.project.name = appName + '-desktop'
-sourceCompatibility = ${project.advanced.desktopJavaVersion}
-
+mainClassName = '${project.basic.rootPackage}.lwjgl2.Lwjgl2Launcher'
+application.setMainClass(mainClassName)
+eclipse.project.name = appName + '-lwjgl2'
+java.sourceCompatibility = ${project.advanced.desktopJavaVersion}
+java.targetCompatibility = ${project.advanced.desktopJavaVersion}
+if (JavaVersion.current().isJava9Compatible()) {
+        compileJava.options.release.set(${project.advanced.desktopJavaVersion})
+}
+${if (project.rootGradle.plugins.contains("kotlin")) "kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_" + (if (project.advanced.desktopJavaVersion == "8") "1_8" else project.advanced.desktopJavaVersion) + ")\n" else ""}
 dependencies {
 ${joinDependencies(dependencies)}}
 
@@ -83,7 +89,8 @@ jar {
 }
 
 // Equivalent to the jar task; here for compatibility with gdx-setup.
-task dist(dependsOn: [jar]) {
+tasks.register('dist') {
+  dependsOn 'jar'
 }
 
 run {

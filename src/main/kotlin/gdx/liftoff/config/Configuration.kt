@@ -5,7 +5,6 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.czyzby.autumn.annotation.Component
-import com.github.czyzby.autumn.annotation.Destroy
 import com.github.czyzby.autumn.annotation.Initiate
 import com.github.czyzby.autumn.mvc.component.i18n.LocaleService
 import com.github.czyzby.autumn.mvc.component.ui.InterfaceService
@@ -18,7 +17,6 @@ import com.github.czyzby.autumn.mvc.stereotype.preference.LmlMacro
 import com.github.czyzby.autumn.mvc.stereotype.preference.LmlParserSyntax
 import com.github.czyzby.autumn.mvc.stereotype.preference.Preference
 import com.github.czyzby.autumn.mvc.stereotype.preference.StageViewport
-import com.github.czyzby.kiwi.util.common.Exceptions
 import com.github.czyzby.kiwi.util.gdx.asset.lazy.provider.ObjectProvider
 import com.github.czyzby.lml.parser.LmlParser
 import com.github.czyzby.lml.parser.tag.LmlAttribute
@@ -39,7 +37,7 @@ import gdx.liftoff.views.widgets.ScrollableTextArea
 @Suppress("unused") // Fields accessed via reflection.
 class Configuration {
   companion object {
-    const val VERSION = "1.11.0.6-SNAPSHOT"
+    const val VERSION = "1.13.1.0"
     const val WIDTH = 600
     const val HEIGHT = 700
     const val PREFERENCES_PATH = "gdx-liftoff-prefs"
@@ -47,24 +45,31 @@ class Configuration {
 
   @LmlParserSyntax
   val syntax = VisLmlSyntax()
+
   @LmlMacro
   val macro = "templates/macros.lml"
 
   @I18nBundle
   val bundle = "i18n/nls"
+
   @I18nLocale(propertiesPath = PREFERENCES_PATH, defaultLocale = "en")
   val localePreference = "locale"
+
   @AvailableLocales
   val availableLocales = arrayOf("en")
+
   @Preference
   val preferencesPath = PREFERENCES_PATH
+
   @StageViewport
   val viewportProvider = ObjectProvider<Viewport> { FitViewport(WIDTH.toFloat(), HEIGHT.toFloat()) }
 
   @Initiate(priority = AutumnActionPriority.TOP_PRIORITY)
   fun initiate(skinService: SkinService, interfaceService: InterfaceService, localeService: LocaleService) {
     VisUI.setSkipGdxVersionCheck(true)
-    VisUI.load(Gdx.files.internal("skin/tinted.json"))
+    if (!VisUI.isLoaded()) {
+      VisUI.load(Gdx.files.internal("skin/tinted.json"))
+    }
     skinService.addSkin("default", VisUI.getSkin())
     FileChooser.setDefaultPrefsName(PREFERENCES_PATH)
 
@@ -96,14 +101,5 @@ class Configuration {
       },
       "tooltip"
     )
-  }
-
-  @Destroy
-  fun destroyThreadPool() {
-    try {
-      threadPool.shutdownNow()
-    } catch (exception: Exception) {
-      Exceptions.ignore(exception)
-    }
   }
 }
