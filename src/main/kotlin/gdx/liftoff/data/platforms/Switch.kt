@@ -14,7 +14,7 @@ import gdx.liftoff.views.GdxPlatform
 class Switch : Platform {
   companion object {
     const val ID = "switch"
-    const val ORDER = iOSMOE.ORDER + 1
+    const val ORDER = IOSMOE.ORDER + 1
   }
 
   override val id = ID
@@ -163,7 +163,7 @@ task transpile(dependsOn: 'build') {
 
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'cmd', '/c', "C:\\devkitPro\\msys2\\usr\\bin\\rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/build-uwp' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
+                commandLine 'cmd', '/c', "C:\\msys64\\usr\\bin\\rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/build-uwp' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
             else
                 commandLine 'bash', '-c', "rsync -crh --delete --checksum --exclude '/cmake-build-*' --exclude '/build' --exclude '/data' --exclude '/sdmc' --exclude '/.idea' dist/ ${'$'}{rootProject.name}"
             workingDir "${'$'}buildDir"
@@ -179,14 +179,14 @@ task run(dependsOn: transpile) {
     doLast {
         exec {
             if (DefaultNativePlatform.currentOperatingSystem.isWindows())
-                commandLine 'C:\\devkitPro\\msys2\\msys2_shell.cmd', '-mingw64', '-where', "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}", '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build-run -G \'MSYS Makefiles\' && cmake --build build-run || sleep 50000'
+                commandLine 'C:\\msys64\\msys2_shell.cmd', '-mingw64', '-where', "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}", '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build-run -G \'MSYS Makefiles\' && cmake --build build-run || sleep 50000'
             else
                 commandLine 'bash', '-c', 'cmake -DCMAKE_BUILD_TYPE=Debug -S . -B cmake-build-run -G Ninja && cmake --build cmake-build-run'
             workingDir "${'$'}buildDir${'$'}{File.separator}${'$'}{rootProject.name}"
         }
         if (DefaultNativePlatform.currentOperatingSystem.isWindows()) {
             copy { // Todo: Copy only needed
-                from "C:\\devkitPro\\msys2\\mingw64\\bin"
+                from "C:\\msys64\\mingw64\\bin"
                 include "*.dll"
                 into "${'$'}buildDir\\${'$'}{rootProject.name}\\cmake-build-run"
             }
